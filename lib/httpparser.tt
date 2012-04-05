@@ -1,0 +1,111 @@
+# Simple and incomplete HTTP parser.
+#
+# This software is licensed under the Creative
+# Commons CC0 1.0 Universal License.
+# To view a copy of this license, visit
+# http://creativecommons.org/publicdomain/zero/1.0/legalcode
+#
+# @author Patrick Hof
+
+grammar HTTP
+
+  rule request
+    req delimiter headers (delimiter delimiter body) 0..1 {
+      def content
+        [req.content, headers.content]
+      end
+    }
+  end
+
+  rule req 
+    verb space url space version {
+      def content
+        req = {
+          :verb => elements[0],
+          :url => elements[2],
+          :version => elements[4]
+        }
+      end
+    }
+  end
+
+  rule verb
+    'GET' / 'POST' / 'PUT' / 'DELETE' / 'HEAD' {
+      def content
+        text_value
+    }
+  end
+
+  rule url
+    string {
+      def content
+        text_value
+    }
+  end
+
+  rule version
+    'HTTP/1.' ('0' / '1') {
+      def content
+        text_value
+      end
+    }
+  end
+
+  rule headers
+    header* {
+      def content
+        h = {}
+        elements.each do |el|
+          elc = el.content
+          h[elc[0]] = elc[1]
+        end
+        h
+      end
+    }
+  end
+
+  rule header
+    h_key ':' space 0..1 h_val delimiter {
+      def content
+        [elements[0].text_value, elements[3].text_value]
+      end
+    }
+  end
+
+  rule h_key
+    string
+  end
+
+  rule h_val
+    string
+  end
+
+  rule body
+    string {
+      def content
+        text_value
+      end
+    }
+  end
+
+  rule delimiter
+   '\n' / '\r\n' 
+  end
+
+  rule space
+    [ \t]* {
+      def content
+        text_value
+      end
+    }
+  end
+
+  rule string
+    .* {
+      def content
+        text_value
+      end
+    }
+  end
+
+end

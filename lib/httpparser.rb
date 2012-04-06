@@ -18,16 +18,12 @@ module HTTP
   end
 
   module Request0
-    def delimiter1
+    def delimiter
       elements[0]
     end
 
-    def delimiter2
-      elements[1]
-    end
-
     def body
-      elements[2]
+      elements[1]
     end
   end
 
@@ -48,7 +44,9 @@ module HTTP
 
   module Request2
     def content
-      [req.content, headers.content]
+      res = elements[0].content
+      res[:headers] = elements[2].content
+      return res
     end
   end
 
@@ -73,36 +71,32 @@ module HTTP
         r3 = _nt_headers
         s0 << r3
         if r3
-          s4, i4 = [], index
-          loop do
-            i5, s5 = index, []
-            r6 = _nt_delimiter
-            s5 << r6
-            if r6
-              r7 = _nt_delimiter
-              s5 << r7
-              if r7
-                r8 = _nt_body
-                s5 << r8
-              end
-            end
-            if s5.last
-              r5 = instantiate_node(SyntaxNode,input, i5...index, s5)
-              r5.extend(Request0)
+          i4 = index
+          i5, s5 = index, []
+          r6 = _nt_delimiter
+          s5 << r6
+          if r6
+            r7 = _nt_body
+            s5 << r7
+          end
+          if s5.last
+            r5 = instantiate_node(SyntaxNode,input, i5...index, s5)
+            r5.extend(Request0)
+          else
+            @index = i5
+            r5 = nil
+          end
+          if r5
+            r4 = r5
+          else
+            r8 = _nt_delimiter
+            if r8
+              r4 = r8
             else
-              @index = i5
-              r5 = nil
-            end
-            if r5
-              s4 << r5
-            else
-              break
-            end
-            if s4.size == 1
-              break
+              @index = i4
+              r4 = nil
             end
           end
-          r4 = instantiate_node(SyntaxNode,input, i4...index, s4)
           s0 << r4
         end
       end
@@ -146,9 +140,9 @@ module HTTP
   module Req1
     def content
       req = {
-        :verb => elements[0],
-        :url => elements[2],
-        :version => elements[4]
+        :verb    => elements[0].text_value,
+        :url     => elements[2].text_value,
+        :version => elements[4].text_value
       }
     end
   end
@@ -195,11 +189,6 @@ module HTTP
     node_cache[:req][start_index] = r0
 
     r0
-  end
-
-  module Verb0
-    def content
-      text_value
   end
 
   def _nt_verb
@@ -256,7 +245,6 @@ module HTTP
           else
             if has_terminal?('HEAD', false, index)
               r5 = instantiate_node(SyntaxNode,input, index...(index + 4))
-              r5.extend(Verb0)
               @index += 4
             else
               terminal_parse_failure('HEAD')
@@ -278,11 +266,6 @@ module HTTP
     r0
   end
 
-  module Url0
-    def content
-      text_value
-  end
-
   def _nt_url
     start_index = index
     if node_cache[:url].has_key?(index)
@@ -294,21 +277,16 @@ module HTTP
       return cached
     end
 
-    r0 = _nt_string
-    r0.extend(Url0)
+    if has_terminal?('\G[a-zA-Z0-9/%:.]', true, index)
+      r0 = instantiate_node(SyntaxNode,input, index...(index + 1))
+      @index += 1
+    else
+      r0 = nil
+    end
 
     node_cache[:url][start_index] = r0
 
     r0
-  end
-
-  module Version0
-  end
-
-  module Version1
-    def content
-      text_value
-    end
   end
 
   def _nt_version
@@ -322,50 +300,30 @@ module HTTP
       return cached
     end
 
-    i0, s0 = index, []
-    if has_terminal?('HTTP/1.', false, index)
-      r1 = instantiate_node(SyntaxNode,input, index...(index + 7))
-      @index += 7
+    i0 = index
+    if has_terminal?('HTTP/1.0', false, index)
+      r1 = instantiate_node(SyntaxNode,input, index...(index + 8))
+      @index += 8
     else
-      terminal_parse_failure('HTTP/1.')
+      terminal_parse_failure('HTTP/1.0')
       r1 = nil
     end
-    s0 << r1
     if r1
-      i2 = index
-      if has_terminal?('0', false, index)
-        r3 = instantiate_node(SyntaxNode,input, index...(index + 1))
-        @index += 1
-      else
-        terminal_parse_failure('0')
-        r3 = nil
-      end
-      if r3
-        r2 = r3
-      else
-        if has_terminal?('1', false, index)
-          r4 = instantiate_node(SyntaxNode,input, index...(index + 1))
-          @index += 1
-        else
-          terminal_parse_failure('1')
-          r4 = nil
-        end
-        if r4
-          r2 = r4
-        else
-          @index = i2
-          r2 = nil
-        end
-      end
-      s0 << r2
-    end
-    if s0.last
-      r0 = instantiate_node(SyntaxNode,input, i0...index, s0)
-      r0.extend(Version0)
-      r0.extend(Version1)
+      r0 = r1
     else
-      @index = i0
-      r0 = nil
+      if has_terminal?('HTTP/1.1', false, index)
+        r2 = instantiate_node(SyntaxNode,input, index...(index + 8))
+        @index += 8
+      else
+        terminal_parse_failure('HTTP/1.1')
+        r2 = nil
+      end
+      if r2
+        r0 = r2
+      else
+        @index = i0
+        r0 = nil
+      end
     end
 
     node_cache[:version][start_index] = r0
@@ -417,6 +375,10 @@ module HTTP
       elements[0]
     end
 
+    def space
+      elements[2]
+    end
+
     def h_val
       elements[3]
     end
@@ -456,26 +418,14 @@ module HTTP
       end
       s0 << r2
       if r2
-        s3, i3 = [], index
-        loop do
-          r4 = _nt_space
-          if r4
-            s3 << r4
-          else
-            break
-          end
-          if s3.size == 1
-            break
-          end
-        end
-        r3 = instantiate_node(SyntaxNode,input, i3...index, s3)
+        r3 = _nt_space
         s0 << r3
         if r3
-          r5 = _nt_h_val
-          s0 << r5
-          if r5
-            r6 = _nt_delimiter
-            s0 << r6
+          r4 = _nt_h_val
+          s0 << r4
+          if r4
+            r5 = _nt_delimiter
+            s0 << r5
           end
         end
       end
@@ -505,11 +455,33 @@ module HTTP
       return cached
     end
 
-    r0 = _nt_string
+    s0, i0 = [], index
+    loop do
+      if has_terminal?('\G[a-zA-Z0-9-]', true, index)
+        r1 = true
+        @index += 1
+      else
+        r1 = nil
+      end
+      if r1
+        s0 << r1
+      else
+        break
+      end
+    end
+    if s0.empty?
+      @index = i0
+      r0 = nil
+    else
+      r0 = instantiate_node(SyntaxNode,input, i0...index, s0)
+    end
 
     node_cache[:h_key][start_index] = r0
 
     r0
+  end
+
+  module HVal0
   end
 
   def _nt_h_val
@@ -523,7 +495,65 @@ module HTTP
       return cached
     end
 
-    r0 = _nt_string
+    s0, i0 = [], index
+    loop do
+      i1, s1 = index, []
+      i2 = index
+      if has_terminal?("\r", false, index)
+        r3 = instantiate_node(SyntaxNode,input, index...(index + 1))
+        @index += 1
+      else
+        terminal_parse_failure("\r")
+        r3 = nil
+      end
+      if r3
+        r2 = nil
+      else
+        @index = i2
+        r2 = instantiate_node(SyntaxNode,input, index...index)
+      end
+      s1 << r2
+      if r2
+        i4 = index
+        if has_terminal?("\n", false, index)
+          r5 = instantiate_node(SyntaxNode,input, index...(index + 1))
+          @index += 1
+        else
+          terminal_parse_failure("\n")
+          r5 = nil
+        end
+        if r5
+          r4 = nil
+        else
+          @index = i4
+          r4 = instantiate_node(SyntaxNode,input, index...index)
+        end
+        s1 << r4
+        if r4
+          if index < input_length
+            r6 = instantiate_node(SyntaxNode,input, index...(index + 1))
+            @index += 1
+          else
+            terminal_parse_failure("any character")
+            r6 = nil
+          end
+          s1 << r6
+        end
+      end
+      if s1.last
+        r1 = instantiate_node(SyntaxNode,input, i1...index, s1)
+        r1.extend(HVal0)
+      else
+        @index = i1
+        r1 = nil
+      end
+      if r1
+        s0 << r1
+      else
+        break
+      end
+    end
+    r0 = instantiate_node(SyntaxNode,input, i0...index, s0)
 
     node_cache[:h_val][start_index] = r0
 
@@ -547,7 +577,22 @@ module HTTP
       return cached
     end
 
-    r0 = _nt_string
+    s0, i0 = [], index
+    loop do
+      if index < input_length
+        r1 = instantiate_node(SyntaxNode,input, index...(index + 1))
+        @index += 1
+      else
+        terminal_parse_failure("any character")
+        r1 = nil
+      end
+      if r1
+        s0 << r1
+      else
+        break
+      end
+    end
+    r0 = instantiate_node(SyntaxNode,input, i0...index, s0)
     r0.extend(Body0)
 
     node_cache[:body][start_index] = r0
@@ -567,21 +612,21 @@ module HTTP
     end
 
     i0 = index
-    if has_terminal?('\n', false, index)
-      r1 = instantiate_node(SyntaxNode,input, index...(index + 2))
-      @index += 2
+    if has_terminal?("\n", false, index)
+      r1 = instantiate_node(SyntaxNode,input, index...(index + 1))
+      @index += 1
     else
-      terminal_parse_failure('\n')
+      terminal_parse_failure("\n")
       r1 = nil
     end
     if r1
       r0 = r1
     else
-      if has_terminal?('\r\n', false, index)
-        r2 = instantiate_node(SyntaxNode,input, index...(index + 4))
-        @index += 4
+      if has_terminal?("\r\n", false, index)
+        r2 = instantiate_node(SyntaxNode,input, index...(index + 2))
+        @index += 2
       else
-        terminal_parse_failure('\r\n')
+        terminal_parse_failure("\r\n")
         r2 = nil
       end
       if r2
@@ -628,50 +673,15 @@ module HTTP
         break
       end
     end
-    r0 = instantiate_node(SyntaxNode,input, i0...index, s0)
-    r0.extend(Space0)
+    if s0.empty?
+      @index = i0
+      r0 = nil
+    else
+      r0 = instantiate_node(SyntaxNode,input, i0...index, s0)
+      r0.extend(Space0)
+    end
 
     node_cache[:space][start_index] = r0
-
-    r0
-  end
-
-  module String0
-    def content
-      text_value
-    end
-  end
-
-  def _nt_string
-    start_index = index
-    if node_cache[:string].has_key?(index)
-      cached = node_cache[:string][index]
-      if cached
-        cached = SyntaxNode.new(input, index...(index + 1)) if cached == true
-        @index = cached.interval.end
-      end
-      return cached
-    end
-
-    s0, i0 = [], index
-    loop do
-      if index < input_length
-        r1 = instantiate_node(SyntaxNode,input, index...(index + 1))
-        @index += 1
-      else
-        terminal_parse_failure("any character")
-        r1 = nil
-      end
-      if r1
-        s0 << r1
-      else
-        break
-      end
-    end
-    r0 = instantiate_node(SyntaxNode,input, i0...index, s0)
-    r0.extend(String0)
-
-    node_cache[:string][start_index] = r0
 
     r0
   end

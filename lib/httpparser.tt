@@ -10,9 +10,11 @@
 grammar HTTP
 
   rule request
-    req delimiter headers (delimiter delimiter body) 0..1 {
+    req delimiter headers ((delimiter body) / delimiter) {
       def content
-        [req.content, headers.content]
+        res = elements[0].content
+        res[:headers] = elements[2].content
+        return res
       end
     }
   end
@@ -21,34 +23,24 @@ grammar HTTP
     verb space url space version {
       def content
         req = {
-          :verb => elements[0],
-          :url => elements[2],
-          :version => elements[4]
+          :verb    => elements[0].text_value,
+          :url     => elements[2].text_value,
+          :version => elements[4].text_value
         }
       end
     }
   end
 
   rule verb
-    'GET' / 'POST' / 'PUT' / 'DELETE' / 'HEAD' {
-      def content
-        text_value
-    }
+    'GET' / 'POST' / 'PUT' / 'DELETE' / 'HEAD'
   end
 
   rule url
-    string {
-      def content
-        text_value
-    }
+    [a-zA-Z0-9/%:.]
   end
 
   rule version
-    'HTTP/1.' ('0' / '1') {
-      def content
-        text_value
-      end
-    }
+    'HTTP/1.0' / 'HTTP/1.1'
   end
 
   rule headers
@@ -65,7 +57,7 @@ grammar HTTP
   end
 
   rule header
-    h_key ':' space 0..1 h_val delimiter {
+    h_key ':' space h_val delimiter {
       def content
         [elements[0].text_value, elements[3].text_value]
       end
@@ -73,15 +65,15 @@ grammar HTTP
   end
 
   rule h_key
-    string
+    [a-zA-Z0-9-]+
   end
 
   rule h_val
-    string
+    (!"\r" !"\n" .)*
   end
 
   rule body
-    string {
+    .* {
       def content
         text_value
       end
@@ -89,19 +81,11 @@ grammar HTTP
   end
 
   rule delimiter
-   '\n' / '\r\n' 
+   "\n" / "\r\n"
   end
 
   rule space
-    [ \t]* {
-      def content
-        text_value
-      end
-    }
-  end
-
-  rule string
-    .* {
+    [ \t]+ {
       def content
         text_value
       end

@@ -1,4 +1,4 @@
-# Simple and incomplete HTTP parser.
+# Simple and incomplete HTTP request parser.
 #
 # This software is licensed under the Creative
 # Commons CC0 1.0 Universal License.
@@ -7,14 +7,44 @@
 #
 # @author Patrick Hof
 
-grammar HTTP
+grammar HedgeReq
 
   rule request
-    req delimiter headers ((delimiter body) / delimiter) {
+    req delimiter headers delimiter ( body / '') {
+
       def content
         res = elements[0].content
         res[:headers] = elements[2].content
+        res[:body] = elements[4].text_value.chomp
+        unless res[:body].empty?
+          ctype = res[:headers]["Content-Type"]
+          res[:body_hash] = parse_body(res[:body], ctype)
+        end
         return res
+      end
+
+      # Parse the body data into a hash structure
+      #
+      # @param [String] raw The raw body data 
+      # @return [Hash] A hash with keys = parameter name and value = Array of
+      #                values
+      # @todo Implement multipart/form-data
+      def parse_body(raw, ctype)
+        body = {}
+        if ctype == 'application/x-www-form-urlencoded'
+          raw.chomp.split("&").map {|x| x.split("=")}.each do |el|
+            if el.length == 1
+              body[el[0]] = [] unless body.has_key?(el[0])
+            elsif el.length == 2
+              if body.has_key?(el[0])
+                body[el[0]] << el[1]
+              else
+                body[el[0]] = [el[1]]
+              end
+            end
+          end
+        end
+        return body
       end
     }
   end
@@ -32,7 +62,7 @@ grammar HTTP
   end
 
   rule verb
-    'GET' / 'POST' / 'PUT' / 'DELETE' / 'HEAD'
+    'GET' / 'POST' / 'PUT' / 'DELETE' / 'HEAD' / 'OPTIONS' / 'TRACE' / 'CONNECT' / 'PATCH'
   end
 
   rule url

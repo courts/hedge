@@ -2,23 +2,16 @@ require 'bacon'
 require 'polyglot'
 require 'treetop'
 
-require_relative File.join('..', 'lib', 'httpparser')
+require 'hedge/hedge.tt'
 
-describe HTTPParser do
+describe HedgeReqParser do
 
   before do
-    @parser = HTTPParser.new
+    @parser = HedgeReqParser.new
   end
 
   it "should parse an HTTP GET request" do
     res = @parser.parse(File.open('http_get.txt').read())
-
-    if !res
-      puts
-      puts @parser.failure_reason
-      exit
-    end
-
     res.content.should == {
       :verb    => "GET",
       :url     => "/",
@@ -30,12 +23,20 @@ describe HTTPParser do
         "Accept-Language" => "en-us,en;q=0.5",
         "Accept-Encoding" => "gzip, deflate",
         "Connection"      => "keep-alive"
-      }
+      },
+      :body    => ""
     }
   end
 
-  #it "should parse an HTTP POST request" do
-  #  res = @parser.parse(File.open('http_post.txt').read())
-  #end
+  it "should parse an HTTP POST request" do
+    res = @parser.parse(File.open('http_post.txt').read())
+    res.content[:verb].should == "POST"
+    res.content[:body].should == "param1=1&param2=2&param3=3&param1=4"
+    res.content[:body_hash].should == {
+      'param1' => ['1', '4'],
+      'param2' => ['2'],
+      'param3' => ['3']
+    }
+  end
 
 end

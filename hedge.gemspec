@@ -2,10 +2,10 @@
 
 Gem::Specification.new do |s|
   s.name = %q{hedge}
-  s.version = "0.0.1"
+  s.version = "0.0.2"
 
   s.authors = ["Patrick Hof"]
-  s.date = %q{2012-05-05}
+  s.date = %q{2012-05-14}
   s.email = %q{courts@offensivethinking.org}
   s.files = %w(lib/hedge/hedge.tt)
   s.homepage = %q{http://www.offensivethinking.org}

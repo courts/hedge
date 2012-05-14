@@ -30,6 +30,10 @@ describe HedgeReqParser do
 
   it "should parse an HTTP POST request" do
     res = @parser.parse(File.open('http_post.txt').read())
+    unless res
+      puts @parser.failure_reason
+      exit
+    end
     res.content[:verb].should == "POST"
     res.content[:body].should == "param1=1&param2=2&param3=3&param1=4"
     res.content[:body_hash].should == {

@@ -10,47 +10,24 @@
 grammar HedgeReq
 
   rule request
-    req delimiter headers delimiter ( body / '') {
-
+    req delimiter headers delimiter body
+    {
       def content
         res = elements[0].content
         res[:headers] = elements[2].content
         res[:body] = elements[4].text_value.chomp
         unless res[:body].empty?
           ctype = res[:headers]["Content-Type"]
-          res[:body_hash] = parse_body(res[:body], ctype)
+          res[:body_hash] = elements[4].to_hash
         end
         return res
-      end
-
-      # Parse the body data into a hash structure
-      #
-      # @param [String] raw The raw body data 
-      # @return [Hash] A hash with keys = parameter name and value = Array of
-      #                values
-      # @todo Implement multipart/form-data
-      def parse_body(raw, ctype)
-        body = {}
-        if ctype == 'application/x-www-form-urlencoded'
-          raw.chomp.split("&").map {|x| x.split("=")}.each do |el|
-            if el.length == 1
-              body[el[0]] = [] unless body.has_key?(el[0])
-            elsif el.length == 2
-              if body.has_key?(el[0])
-                body[el[0]] << el[1]
-              else
-                body[el[0]] = [el[1]]
-              end
-            end
-          end
-        end
-        return body
       end
     }
   end
 
   rule req 
-    verb space url space version {
+    verb space url space version
+    {
       def content
         req = {
           :verb    => elements[0].text_value,
@@ -74,7 +51,8 @@ grammar HedgeReq
   end
 
   rule headers
-    header* {
+    header*
+    {
       def content
         h = {}
         elements.each do |el|
@@ -87,7 +65,8 @@ grammar HedgeReq
   end
 
   rule header
-    h_key ':' space h_val delimiter {
+    h_key ':' space h_val delimiter
+    {
       def content
         [elements[0].text_value, elements[3].text_value]
       end
@@ -95,7 +74,7 @@ grammar HedgeReq
   end
 
   rule h_key
-    [a-zA-Z0-9-]+
+    [a-zA-Z0-9\-]+
   end
 
   rule h_val
@@ -103,11 +82,43 @@ grammar HedgeReq
   end
 
   rule body
-    .* {
-      def content
-        text_value
+    urlencoded / ''
+  end
+
+  rule urlencoded
+    param+ delimiter?
+    {
+      def to_hash
+        body = {}
+        elements[0].elements.each do |el_node|
+          el = el_node.content
+          if body.has_key?(el[0])
+            body[el[0]] << el[1]
+          else
+            body[el[0]] = [el[1]]
+          end
+        end
+        return body
       end
     }
+  end
+
+  rule param
+    param_key '=' (param_val / '') '&'?
+    {
+      def content
+        [elements[0].text_value, elements[2].text_value]
+      end
+    }
+  end
+
+  rule param_val
+    param_key
+  end
+
+  # FIXME This list seems to be incomplete
+  rule param_key
+    [a-zA-Z0-9\-%+]+
   end
 
   rule delimiter
@@ -115,7 +126,8 @@ grammar HedgeReq
   end
 
   rule space
-    [ \t]+ {
+    [ \t]+
+    {
       def content
         text_value
       end

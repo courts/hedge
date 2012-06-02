@@ -7,18 +7,26 @@
 #
 # @author Patrick Hof
 
+require 'polyglot'
+require 'treetop'
+
+require 'hedge/urlencode.tt'
+
 grammar HedgeReq
 
   rule request
-    req delimiter headers delimiter body
+    req:req delimiter h:headers delimiter b:body
     {
       def content
-        res = elements[0].content
-        res[:headers] = elements[2].content
-        res[:body] = elements[4].text_value.chomp
+        res = req.content
+        res[:headers] = h.content
+        res[:body] = b.content
         unless res[:body].empty?
           ctype = res[:headers]["Content-Type"]
-          res[:body_hash] = elements[4].to_hash
+          if ctype = 'application/x-www-form-urlencoded'
+            parser = UrlEncodeParser.new
+            res[:body_hash] = parser.parse(res[:body]).content
+          end
         end
         return res
       end
@@ -26,13 +34,13 @@ grammar HedgeReq
   end
 
   rule req 
-    verb space url space version
+    verb:verb space url:url space ver:version
     {
       def content
         req = {
-          :verb    => elements[0].text_value,
-          :url     => elements[2].text_value,
-          :version => elements[4].text_value
+          :verb    => verb.text_value,
+          :url     => url.text_value,
+          :version => ver.text_value
         }
       end
     }
@@ -65,10 +73,10 @@ grammar HedgeReq
   end
 
   rule header
-    h_key ':' space h_val delimiter
+    key:h_key ':' space val:h_val delimiter
     {
       def content
-        [elements[0].text_value, elements[3].text_value]
+        [key.text_value, val.text_value]
       end
     }
   end
@@ -82,43 +90,12 @@ grammar HedgeReq
   end
 
   rule body
-    urlencoded / ''
-  end
-
-  rule urlencoded
-    param+ delimiter?
-    {
-      def to_hash
-        body = {}
-        elements[0].elements.each do |el_node|
-          el = el_node.content
-          if body.has_key?(el[0])
-            body[el[0]] << el[1]
-          else
-            body[el[0]] = [el[1]]
-          end
-        end
-        return body
-      end
-    }
-  end
-
-  rule param
-    param_key '=' (param_val / '') '&'?
+    .*
     {
       def content
-        [elements[0].text_value, elements[2].text_value]
+        return text_value.chomp
       end
     }
-  end
-
-  rule param_val
-    param_key
-  end
-
-  # FIXME This list seems to be incomplete
-  rule param_key
-    [a-zA-Z0-9\-%+]+
   end
 
   rule delimiter
@@ -127,11 +104,6 @@ grammar HedgeReq
 
   rule space
     [ \t]+
-    {
-      def content
-        text_value
-      end
-    }
   end
 
 end

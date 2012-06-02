@@ -1,0 +1,52 @@
+# Simple parser for url-encoded data.
+#
+# This software is licensed under the Creative
+# Commons CC0 1.0 Universal License.
+# To view a copy of this license, visit
+# http://creativecommons.org/publicdomain/zero/1.0/legalcode
+#
+# @author Patrick Hof
+
+grammar UrlEncode
+
+  rule urlencoded
+    param:param+ delimiter?
+    {
+      def content 
+        body = {}
+        param.elements.each do |el_node|
+          el = el_node.content
+          if body.has_key?(el[0])
+            body[el[0]] << el[1]
+          else
+            body[el[0]] = [el[1]]
+          end
+        end
+        return body
+      end
+    }
+  end
+
+  rule param
+    key:param_key '=' val:(param_val / '') '&'?
+    {
+      def content
+        [key.text_value, val.text_value]
+      end
+    }
+  end
+
+  rule param_val
+    param_key
+  end
+
+  # FIXME This list seems to be incomplete
+  rule param_key
+    [a-zA-Z0-9\-%+]+
+  end
+
+  rule delimiter
+   "\n" / "\r\n"
+  end
+
+end

@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.authors = ["Patrick Hof"]
   s.date = %q{2012-06-02}
   s.email = %q{courts@offensivethinking.org}
-  s.files = %w(lib/hedge/hedge.tt)
+  s.files = %w(lib/hedge/hedge.tt lib/hedge/urlencode.tt)
   s.homepage = %q{http://www.offensivethinking.org}
   s.require_paths = ["lib"]
   s.summary = %q{A simple and incomplete HTTP request parser}
